@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1e3a5f">
+<title>TrailHead</title>
+<style>
+:root{
+  --bg:#0f1b2d;--card:#1a2b45;--card2:#223858;--accent:#f4a825;--accent2:#3ddc84;
+  --text:#eef4fb;--muted:#8aa3c0;--danger:#ff6b6b;
+}
+body.theme-forest{--bg:#0e1f14;--card:#16301f;--card2:#1e4029;--accent:#8bc34a;--accent2:#ffd54f}
+body.theme-ember{--bg:#221016;--card:#331a22;--card2:#43222d;--accent:#ff8a50;--accent2:#ffd166}
+body.theme-night{--bg:#0a0a12;--card:#141424;--card2:#1e1e38;--accent:#7c6fff;--accent2:#43e0c0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI',Roboto,sans-serif;
+  min-height:100vh;padding-bottom:80px;transition:background .4s}
+.app{max-width:480px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem} h2{font-size:1.15rem;margin:18px 0 8px}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.bar{height:10px;background:var(--card2);border-radius:5px;overflow:hidden;margin-top:8px}
+.bar>div{height:100%;background:var(--accent2);border-radius:5px;transition:width .6s cubic-bezier(.2,.9,.3,1.2)}
+.req{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:var(--card2);
+  margin-bottom:8px;cursor:pointer;transition:transform .1s,background .2s}
+.req:active{transform:scale(.97)}
+.req.done{background:linear-gradient(90deg,var(--card2),color-mix(in srgb,var(--accent2) 25%,var(--card2)))}
+.req .chk{width:26px;height:26px;border-radius:50%;border:2px solid var(--muted);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s}
+.req.done .chk{background:var(--accent2);border-color:var(--accent2);color:#06281a}
+.req small{display:block;color:var(--muted)}
+.tabs{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);
+  border-top:1px solid rgba(255,255,255,.06);z-index:10}
+.tabs button{flex:1;background:none;border:none;color:var(--muted);padding:12px 4px 20px;
+  font-size:.7rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabs button.active{color:var(--accent)}
+.tabs .ic{font-size:1.3rem}
+.btn{background:var(--accent);color:#1c1408;border:none;border-radius:12px;padding:13px 20px;
+  font-weight:700;font-size:1rem;width:100%;cursor:pointer}
+.btn.ghost{background:var(--card2);color:var(--text)}
+.pill{display:inline-block;background:var(--card2);border-radius:20px;padding:4px 12px;
+  font-size:.75rem;color:var(--muted);margin:2px}
+.xp{font-size:2rem;font-weight:800;color:var(--accent)}
+.view{display:none}.view.active{display:block;animation:fade .3s}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-80px);
+  background:var(--accent2);color:#06281a;padding:12px 22px;border-radius:24px;font-weight:700;
+  transition:transform .35s cubic-bezier(.2,.9,.3,1.3);z-index:99}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.avatar{font-size:3rem;text-align:center}
+.badge{width:60px;height:60px;border-radius:14px;background:var(--card2);display:flex;
+  align-items:center;justify-content:center;font-size:1.7rem;opacity:.25;transition:opacity .5s}
+.badge.on{opacity:1;box-shadow:0 0 12px color-mix(in srgb,var(--accent) 50%,transparent)}
+.drill{border-left:4px solid var(--accent)}
+.confetti{position:fixed;top:-10px;font-size:1.4rem;animation:fall 1.8s linear forwards;z-index:98;pointer-events:none}
+@keyframes fall{to{transform:translateY(105vh) rotate(660deg);opacity:0}}
+.mission{background:linear-gradient(135deg,var(--card),var(--card2));border:1px solid var(--accent);border-radius:16px;padding:16px;margin-bottom:12px}
+select,input,textarea{background:var(--card2);color:var(--text);border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;padding:12px;font-size:1rem;width:100%;margin-bottom:8px}
+.syncdot{position:fixed;top:12px;right:12px;width:10px;height:10px;border-radius:50%;background:var(--danger)}
+.syncdot.on{background:var(--accent2)}
+.err{position:fixed;bottom:90px;left:16px;right:16px;background:var(--danger);color:#fff;
+  padding:12px;border-radius:12px;font-size:.85rem;z-index:98;display:none}
+</style>
+</head>
+<body>
+<div class="syncdot" id="syncdot"></div>
+<div class="toast" id="toast"></div>
+<div class="err" id="errbox"></div>
+<div class="app">
+
+<!-- ================= SCOUT VIEW ================= -->
+<div id="view-scout" class="view active">
+
+  <div class="card" style="text-align:center">
+    <div class="avatar" id="avatar">🏕️</div>
+    <h1 id="scoutName">Scout</h1>
+    <div><span class="pill" id="rankPill">Rank: Scout</span><span class="pill" id="streakPill">🔥 0 day streak</span><span class="pill" id="levelPill">Lv 1</span></div>
+    <div class="bar"><div id="rankbar" style="width:0%"></div></div>
+    <div class="xp"><span id="xpNum">0</span> <small style="font-size:.9rem;color:var(--muted)">XP</small></div>
+  </div>
+
+  <div class="card mission" id="missionCard" style="display:none">
+    <h2>🎯 This Week's Mission</h2>
+    <div id="missionText"></div>
+    <div id="missionKRs" style="margin-top:8px"></div>
+    <button class="btn ghost" style="margin-top:10px" onclick="App.completeMissionStep()">✅ Log a step today</button>
+  </div>
+
+  <div class="card drill" id="drillCard" style="display:none">
+    <h2>⚡ Daily Drill</h2>
+    <p id="drillText" style="color:var(--muted);margin-top:6px"></p>
+    <button class="btn" style="margin-top:12px" onclick="App.completeDrill()">Did it! 💪</button>
+  </div>
+
+  <div class="card drill" id="tipCard" style="display:none">
+    <h2>📬 From your Scoutmaster</h2>
+    <p id="tipText" style="margin-top:6px"></p>
+  </div>
+
+  <h2>📐 Rank Progress</h2>
+  <div class="card">
+    <select id="rankSelect" onchange="App.renderReqs()" style="margin:0"></select>
+    <div id="reqList" style="margin-top:12px"></div>
+  </div>
+
+  <h2>🏅 Unlocks</h2>
+  <div class="card">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center" id="badgeGrid"></div>
+  </div>
+</div>
+
+<!-- ================= PARENT VIEW ================= -->
+<div id="view-parent" class="view">
+  <h1>👨‍👩‍👦 Parent Snapshot</h1>
+  <div class="card">
+    <h2 id="pName"></h2>
+    <p id="pRank" style="color:var(--muted)"></p>
+    <div class="bar"><div id="pBar" style="width:0%"></div></div>
+    <p style="margin-top:12px" id="pRecent"></p>
+  </div>
+  <div class="card">
+    <h2>🤝 How you can help this week</h2>
+    <p id="pHelp" style="color:var(--muted);margin-top:8px"></p>
+  </div>
+  <div class="card">
+    <h2>📧 Weekly email digest</h2>
+    <input id="parentEmail" type="email" placeholder="parent@email.com" onchange="App.saveParentEmail()">
+    <small style="color:var(--muted)">A summary of progress + one suggested activity, every Sunday.</small>
+  </div>
+</div>
+
+<!-- ================= SETTINGS ================= -->
+<div id="view-settings" class="view">
+  <h1>⚙️ Settings</h1>
+  <div class="card">
+    <h2>Scout info</h2>
+    <input id="inName" placeholder="Scout name" onchange="App.saveSettings()">
+    <select id="inRank" onchange="App.saveSettings()"></select>
+  </div>
+  <div class="card">
+    <h2>Avatar</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center" id="avatarPicker"></div>
+  </div>
+  <div class="card">
+    <h2>Theme <small style="color:var(--muted)">(unlocks as you level up)</small></h2>
+    <div style="display:flex;gap:10px" id="themePicker"></div>
+  </div>
+  <div class="card">
+    <h2>Server sync</h2>
+    <p style="color:var(--muted);font-size:.85rem" id="syncStatus"></p>
+    <button class="btn ghost" style="margin-top:8px" onclick="App.sync(true)">Sync now</button>
+  </div>
+</div>
+
+</div>
+
+<div class="tabs">
+  <button class="active" onclick="App.tab('scout',this)"><span class="ic">🏕️</span>Trail</button>
+  <button onclick="App.tab('parent',this)"><span class="ic">👨‍👩‍👦</span>Parents</button>
+  <button onclick="App.tab('settings',this)"><span class="ic">⚙️</span>Setup</button>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — paste your Supabase URL + anon key here.
+   Leave blank to run 100% locally.
+============================================================ */
+const CONFIG = {
+  SUPABASE_URL: "",      // e.g. "https://abcd.supabase.co"
+  SUPABASE_ANON: "",     // your anon public key
+  SCOUT_ID: "local-scout-1"
+};
+
+/* Bump this whenever you edit the rank .md files, so scouts get the update.
+   Also avoids caching stale requirements forever. */
+const RANK_DATA_VERSION = 1;
+
+/* ---- Markdown rank loader: fetches data/ranks/*.md, caches in localStorage ---- */
+const RankLoader = {
+  cache: {},
+  async loadAll(){
+    const key = "rankCache_v" + RANK_DATA_VERSION;
+    const saved = localStorage.getItem(key);
+    if(saved){
+      try{ this.cache = JSON.parse(saved); return this.cache; }catch(e){}
+    }
+    const files = ["01-scout","02-tenderfoot","03-second-class","04-first-class","05-star","06-life","07-eagle"];
+    for(const f of files){
+      try{
+        const resp = await fetch("data/ranks/" + f + ".md");
+        if(!resp.ok) throw new Error(resp.status);
+        this.parse(f, await resp.text());
+      }catch(e){ console.warn("Could not load rank file:", f, e); }
+    }
+    if(Object.keys(this.cache).length){
+      localStorage.setItem(key, JSON.stringify(this.cache));
+      // clean out old versions
+      Object.keys(localStorage).forEach(k=>{ if(k.startsWith("rankCache_v") && k!==key) localStorage.removeItem(k); });
+    }
+    return this.cache;
+  },
+  parse(file, txt){
+    const name = file.split("-")[1].replace(/^\w/,c=>c.toUpperCase());
+    const reqs = [];
+    let cat = "General";
+    for(const line of txt.split("\n")){
+      const catM = line.match(/^##\s+(.+)/);
+      if(catM){ cat = catM[1].trim(); continue; }
+      const m = line.match(/^-\s\[\s?\]\s([\w-]+)\s\|\s(.+?)\s\|\s(.+)$/);
+      if(m) reqs.push({id:m[1], text:m[2], cat:(m[3]||cat).trim()});
+    }
+    if(reqs.length) this.cache[name] = reqs;
+  }
+};
+
+const TIPS = {
+  "Tenderfoot":"TF-6 (fitness) stalls most scouts — pair it with a buddy and track 30 days of pushups.",
+  "Second Class":"2C-2a (five activities) is the bottleneck. Plan one troop hike that counts for 3+ scouts at once.",
+  "First Class":"1C-10b (service project) has a long lead time — pick a project NOW, even if you do it later.",
+  "Star":"Your bottleneck is merit badges. Pick your next two TODAY and ask the SM for counselors.",
+  "Life":"Start your Eagle project idea early — approvals alone take weeks.",
+  "Eagle":"Focus on the project workbook. Small, well-documented projects pass boards more smoothly than big messy ones."
+};
+
+const PARENT_HELP = {
+  camp:"Find a weekend for a backyard campout — cooking + tent skills count toward rank.",
+  fitness:"Do the fitness test together as a family; 30 days of tracking builds the habit.",
+  service:"Ask about a service project idea over dinner; scouts who talk it out follow through.",
+  cooking:"Let them plan and cook one family meal — it directly counts as practice."
+};
+
+const AVATARS=["🏕️","🐺","🦅","🐻","🧭","⛺","🔥","🌲"];
+const THEMES=[
+  {id:"default",name:"Classic",lvl:1},
+  {id:"forest",name:"Forest 🌲",lvl:3},
+  {id:"ember",name:"Ember 🔥",lvl:6},
+  {id:"night",name:"Night Sky 🌙",lvl:10}
+];
+const BADGES=[
+  {id:"first",icon:"🌱",name:"First Step",test:s=>s.xp>=50},
+  {id:"streak3",icon:"🔥",name:"3-Day Streak",test:s=>s.bestStreak>=3},
+  {id:"streak7",icon:"⚡",name:"7-Day Streak",test:s=>s.bestStreak>=7},
+  {id:"req10",icon:"🧭",name:"10 Requirements",test:s=>Object.values(s.progress).filter(Boolean).length>=10},
+  {id:"req25",icon:"🦅",name:"25 Requirements",test:s=>Object.values(s.progress).filter(Boolean).length>=25},
+  {id:"okr1",icon:"🎯",name:"Mission Complete",test:s=>s.missionsDone>=1},
+  {id:"lvl5",icon:"⭐",name:"Level 5",test:s=>s.level>=5},
+  {id:"drill20",icon:"💪",name:"20 Drills",test:s=>s.drillsDone>=20}
+];
+
+const App = {
+  s:null,
+  RANKS:{},   // populated after RankLoader finishes: { rankName: [reqIds] }
+
+  async init(){
+    try{
+      await RankLoader.loadAll();
+      this.RANKS = Object.fromEntries(
+        Object.entries(RankLoader.cache).map(([rank, reqs]) => [rank, reqs.map(r=>r.id)])
+      );
+      if(!Object.keys(this.RANKS).length){
+        this.err("Couldn't load rank requirements. If you opened this file directly (double-click), host it instead: GitHub Pages or Netlify Drop.");
+      }
+      this.s = JSON.parse(localStorage.getItem("trailhead")||"null") || this.fresh();
+      // guard: unknown rank from old data or typos → fall back to first available
+      if(!this.RANKS[this.s.rank]) this.s.rank = Object.keys(this.RANKS)[0] || "Scout";
+      if(!this.s.name) this.showOnboarding();
+      this.renderAll();
+      this.queueSync();
+      setInterval(()=>this.sync(), 60000);
+      window.addEventListener("online", ()=>this.sync());
+    }catch(e){
+      console.error(e); this.err("Startup error: "+e.message);
+    }
+  },
+  err(msg){ const el=document.getElementById("errbox"); el.textContent=msg; el.style.display="block"; },
+
+  fresh(){ return {
+    name:"",rank:"Scout",xp:0,level:1,avatar:"🏕️",theme:"default",
+    progress:{},streak:0,bestStreak:0,lastActive:null,
+    mission:null,missionLog:{},drillsDone:0,missionsDone:0,
+    parentEmail:"",syncedAt:null
+  };},
+  save(){ localStorage.setItem("trailhead",JSON.stringify(this.s)); },
+
+  /* ---------- ONBOARDING (disguised OKR builder) ---------- */
+  showOnboarding(){
+    const name = prompt("Welcome to TrailHead! What's your first name?")||"Scout";
+    this.s.name = name;
+    alert("Nice to meet you, "+name+"! 🏕️\n\nEvery great trail starts with a destination. Let's pick yours.");
+    const ranks = Object.keys(this.RANKS);
+    const rank = (prompt("Which rank are you working toward next?\n("+ranks.slice(1).join(" / ")+")", ranks[1]||"Tenderfoot")||"").trim();
+    this.s.rank = this.RANKS[rank] ? rank : (ranks[1]||ranks[0]);
+    const krText = prompt("Great choice. Here's the secret of fast scouts: they don't chase the badge — they pick ONE small thing to finish this week.\n\nWhat's one small thing you could finish this week?","")||("finish 1 "+this.s.rank+" requirement");
+    this.s.mission = {objective:"Make progress on "+this.s.rank, krs:[{text:krText, target:3, done:0}], week:this.weekKey()};
+    alert("Mission accepted. 🎯\n\nEach day TrailHead will hand you a tiny 2-minute drill. Do it, earn XP, unlock stuff. That's the whole game.");
+    this.save();
+  },
+
+  weekKey(){ const d=new Date(); const onejan=new Date(d.getFullYear(),0,1);
+    const w=Math.ceil((((d-onejan)/864e5)+onejan.getDay()+1)/7); return d.getFullYear()+"-W"+w; },
+
+  /* ---------- DAILY DRILL (atomic habits: cue → tiny action → reward) ---------- */
+  drillToday(){
+    const pool = [
+      "After dinner tonight, read one requirement card from your handbook (2 min).",
+      "When you brush your teeth tonight, say the Scout Oath out loud once.",
+      "After breakfast tomorrow, text your patrol buddy one requirement you'll do this week.",
+      "When you get home today, pack one item for your camp kit (2 min).",
+      "After homework, do 5 pushups. That's it. Your fitness requirement starts here.",
+      "Tonight, show a parent one thing you finished — telling them makes it stick."
+    ];
+    const i = (new Date().getDate()+this.s.drillsDone) % pool.length;
+    return pool[i];
+  },
+
+  completeDrill(){
+    this.s.drillsDone++; this.addXP(15);
+    const today=new Date().toDateString();
+    if(this.s.lastActive!==today){
+      const yest=new Date(Date.now()-864e5).toDateString();
+      this.s.streak = (this.s.lastActive===yest)?this.s.streak+1:1;
+      this.s.bestStreak=Math.max(this.s.bestStreak,this.s.streak);
+      this.s.lastActive=today;
+    }
+    this.toast("Drill complete! +15 XP 🔥 Streak: "+this.s.streak);
+    this.confetti(); this.save(); this.renderAll(); this.queueSync();
+  },
+
+  /* ---------- MISSIONS (hidden OKRs) ---------- */
+  completeMissionStep(){
+    const m=this.s.mission; if(!m) return;
+    m.krs[0].done++;
+    if(m.krs[0].done>=m.krs[0].target){
+      this.s.missionsDone++; this.addXP(100);
+      this.toast("MISSION COMPLETE! +100 XP 🎯");
+      const next=prompt("New mission! What's your next small weekly goal?","")||"finish 2 more requirements";
+      this.s.mission={objective:this.s.rank,krs:[{text:next,target:3,done:0}],week:this.weekKey()};
+    } else { this.addXP(25); this.toast("Step logged! +25 XP"); }
+    this.confetti(); this.save(); this.renderAll(); this.queueSync();
+  },
+
+  addXP(n){
+    this.s.xp+=n;
+    const nl=Math.floor(this.s.xp/200)+1;
+    if(nl>this.s.level){ this.s.level=nl; setTimeout(()=>this.toast("LEVEL UP! → Lv "+nl+" 🎉"),1200); }
+  },
+
+  /* ---------- REQUIREMENTS ---------- */
+  toggleReq(r){
+    this.s.progress[r]=!this.s.progress[r];
+    if(this.s.progress[r]){
+      this.addXP(40); this.toast(r+" done! +40 XP"); this.confetti();
+    }
+    this.save(); this.renderAll(); this.queueSync();
+  },
+
+  /* ---------- SYNC ----------
+     NOTE: currently delete-all + re-POST, so it will overwrite any
+     leader-entered sign-offs for this scout. Fine until the leader
+     dashboard exists; switch to an upsert (Prefer: resolution=merge-duplicates)
+     with an updated_at merge rule before that launches. */
+  async sync(force){
+    if(!CONFIG.SUPABASE_URL) return;
+    if(!navigator.onLine && !force) return;
+    try{
+      const url=CONFIG.SUPABASE_URL+"/rest/v1/progress";
+      const payload=Object.entries(this.s.progress).filter(([,v])=>v)
+        .map(([k])=>({scout_id:CONFIG.SCOUT_ID,requirement:k,completed:true}));
+      await fetch(url+"?scout_id=eq."+encodeURIComponent(CONFIG.SCOUT_ID),
+        {method:"DELETE",headers:this.hdrs()});
+      if(payload.length) await fetch(url,{method:"POST",headers:this.hdrs(),body:JSON.stringify(payload)});
+      this.s.syncedAt=new Date().toISOString();
+      document.getElementById("syncdot").classList.add("on");
+      this.save();
+    }catch(e){
+      document.getElementById("syncdot").classList.remove("on");
+    }
+  },
+  hdrs(){ return {"apikey":CONFIG.SUPABASE_ANON,"Content-Type":"application/json","Prefer":"return=minimal"}; },
+  queueSync(){ document.getElementById("syncdot").classList.remove("on"); this.sync(); },
+
+  /* ---------- RENDER ---------- */
+  tab(id,btn){
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    document.getElementById("view-"+id).classList.add("active");
+    document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+  },
+  allReqIds(){ return Object.values(this.RANKS).flat(); },
+
+  renderAll(){
+    const s=this.s;
+    document.body.className="theme-"+s.theme;
+    document.getElementById("avatar").textContent=s.avatar;
+    document.getElementById("scoutName").textContent=s.name||"Scout";
+    document.getElementById("rankPill").textContent="Rank: "+s.rank;
+    document.getElementById("streakPill").textContent="🔥 "+s.streak+" day streak";
+    document.getElementById("levelPill").textContent="Lv "+s.level;
+    document.getElementById("xpNum").textContent=s.xp;
+
+    const all=this.allReqIds();
+    const done=all.filter(r=>s.progress[r]).length;
+    document.getElementById("rankbar").style.width=(all.length?done/all.length*100:0)+"%";
+
+    // rank selects
+    const opts=Object.keys(this.RANKS).map(r=>
+      `<option value="r"{r}"r"{r===s.rank?"selected":""}>${r}</option>`).join("");
+    document.getElementById("rankSelect").innerHTML=opts;
+    document.getElementById("inRank").innerHTML=opts;
+
+    document.getElementById("inName").value=s.name;
+    document.getElementById("parentEmail").value=s.parentEmail;
+    this.renderReqs();
+
+    // mission
+    const mc=document.getElementById("missionCard");
+    if(s.mission){
+      mc.style.display="block";
+      document.getElementById("missionText").textContent=s.mission.objective;
+      document.getElementById("missionKRs").innerHTML=s.mission.krs.map(k=>
+        `<div class="bar" style="margin:6px 0"><div style="width:${k.target?k.done/k.target*100:0}%"></div></div>
+         <small>k.text—{k.text} —k.text—{k.done}/${k.target}</small>`).join("");
+    } else mc.style.display="none";
+
+    // drill
+    document.getElementById("drillCard").style.display="block";
+    document.getElementById("drillText").textContent=this.drillToday();
+
+    // leader tip
+    if(TIPS[s.rank]){
+      document.getElementById("tipCard").style.display="block";
+      document.getElementById("tipText").textContent=TIPS[s.rank];
+    } else document.getElementById("tipCard").style.display="none";
+
+    // badges
+    document.getElementById("badgeGrid").innerHTML=BADGES.map(b=>
+      `<div class="badge b.test(s)?"on":"""title="{b.test(s)?"on":""}" title="b.test(s)?"on":"""title="{b.name}">${b.icon}</div>`).join("");
+
+    // themes
+    document.getElementById("themePicker").innerHTML=THEMES.map(t=>
+      `<button class="btn ghost" style="width:auto;flex:1;opacity:${s.level>=t.lvl?1:.4}"
+        {s.level>=t.lvl?`onclick="App.setTheme('{t.id}')"`:"disabled"}>t.name{t.name}t.name{s.level<t.lvl?" (Lv "+t.lvl+")":""}</button>`).join("");
+
+    // avatars
+    document.getElementById("avatarPicker").innerHTML=AVATARS.map(a=>
+      `<button class="btn ghost" style="width:auto;font-size:1.5rem;padding:8px 12px"
+        onclick="App.setAvatar('a′)">{a}')">a′)">{a}</button>`).join("");
+
+    this.renderParent();
+    document.getElementById("syncStatus").textContent = CONFIG.SUPABASE_URL
+      ? (s.syncedAt?"Last synced: "+new Date(s.syncedAt).toLocaleTimeString():"Will sync when online")
+      : "Local only — add Supabase keys in the CONFIG block to enable sync.";
+  },
+
+  renderReqs(){
+    const rank=document.getElementById("rankSelect").value;
+    const reqs=RankLoader.cache[rank]||[];
+    document.getElementById("reqList").innerHTML = reqs.length ? reqs.map(r=>
+      `<div class="req this.s.progress[r.id]?"done":"""onclick="App.toggleReq(′{this.s.progress[r.id]?"done":""}" onclick="App.toggleReq('this.s.progress[r.id]?"done":"""onclick="App.toggleReq(′{r.id}')">
+        <div class="chk">${this.s.progress[r.id]?"✓":""}</div>
+        <div>r.text<small>{r.text}<small>r.text<small>{r.cat}</small></div>
+      </div>`).join("")
+      : `<p style="color:var(--muted)">No requirements loaded. Check that data/ranks/*.md exist next to this page.</p>`;
+  },
+
+  renderParent(){
+    const s=this.s;
+    document.getElementById("pName").textContent=s.name||"Scout";
+    document.getElementById("pRank").textContent="Working on: "+s.rank+" · Lv "+s.level+" · "+s.xp+" XP";
+    const all=this.allReqIds();
+    const done=all.filter(r=>s.progress[r]);
+    document.getElementById("pBar").style.width=(all.length?done.length/all.length*100:0)+"%";
+    document.getElementById("pRecent").textContent=done.length
+      ? "Recently completed: "+done.slice(-3).join(", ")
+      : "No requirements logged yet — ask them about their daily drill!";
+    const keys=Object.keys(PARENT_HELP);
+    document.getElementById("pHelp").textContent=PARENT_HELP[keys[(s.level-1)%keys.length]];
+  },
+
+  setTheme(t){ this.s.theme=t; this.save(); this.renderAll(); },
+  setAvatar(a){ this.s.avatar=a; this.save(); this.renderAll(); },
+  saveSettings(){ this.s.name=document.getElementById("inName").value||this.s.name;
+    const r=document.getElementById("inRank").value;
+    if(this.RANKS[r]) this.s.rank=r;
+    this.save(); this.renderAll(); },
+  saveParentEmail(){ this.s.parentEmail=document.getElementById("parentEmail").value;
+    this.save(); this.toast("Email saved — digests start Sunday!"); this.queueSync(); },
+  toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+    setTimeout(()=>t.classList.remove("show"),2600); },
+  confetti(){ for(let i=0;i<14;i++){ const c=document.createElement("div");
+    c.className="confetti"; c.textContent=["🎉","⭐","🏕️","🔥","🦅"][i%5];
+    c.style.left=Math.random()*100+"vw"; c.style.animationDelay=Math.random()*.4+"s";
+    document.body.appendChild(c); setTimeout(()=>c.remove(),2200); } }
+};
+
+App.init();
+</script>
+</body>
+</html>
